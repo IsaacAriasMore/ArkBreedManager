@@ -1,0 +1,365 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#111827;
+    color:white;
+}
+
+.login{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+form{
+    width:350px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    padding:30px;
+    background:#1f2937;
+    border-radius:12px;
+}
+
+input{
+    padding:12px;
+    border:none;
+    border-radius:8px;
+}
+
+button{
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:#16a34a;
+    color:white;
+    cursor:pointer;
+}
+
+.layout{
+    display:flex;
+    min-height:100vh;
+}
+
+.sidebar{
+    width:240px;
+    background:#1f2937;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+}
+
+.sidebar h2{
+    margin-bottom:30px;
+}
+
+.sidebar nav{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.sidebar button{
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:#374151;
+    color:white;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.sidebar button:hover{
+    background:#4b5563;
+}
+
+.main{
+    flex:1;
+}
+
+.header{
+    height:70px;
+    background:#111827;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 30px;
+    border-bottom:1px solid #2d3748;
+}
+
+.content{
+    padding:30px;
+}
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-user small {
+    background: #374151;
+    color: #d1d5db;
+    padding: 4px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.header-user button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #dc2626;
+    color: white;
+    cursor: pointer;
+}
+/* =========================
+   FINAL UI POLISH
+========================= */
+
+body {
+    background: #0f172a;
+}
+
+.layout {
+    min-height: 100vh;
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    border-right: 1px solid #1f2937;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+}
+
+.sidebar-brand span {
+    font-size: 32px;
+}
+
+.sidebar-brand h2 {
+    font-size: 24px;
+}
+
+.sidebar-nav {
+    display: grid;
+    gap: 8px;
+}
+
+.sidebar-section {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin: 18px 0 4px;
+}
+
+.sidebar button {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #d1d5db;
+    cursor: pointer;
+    transition: .15s ease;
+    font-weight: 600;
+}
+
+.sidebar button:hover {
+    background: #1f2937;
+    color: white;
+}
+
+.sidebar button.active {
+    background: #2563eb;
+    color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, .25);
+}
+
+.header {
+    background: rgba(17, 24, 39, .9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #1f2937;
+}
+
+.header-title h3 {
+    font-size: 22px;
+    margin-bottom: 3px;
+}
+
+.header-title span {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.header-user-info {
+    display: grid;
+    gap: 4px;
+    text-align: right;
+}
+
+.header-user-info strong {
+    font-size: 14px;
+}
+
+.content {
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, .12), transparent 35%),
+        #0f172a;
+}
+
+.page-header h1 {
+    font-size: 34px;
+    margin-bottom: 6px;
+}
+
+.form-card,
+.table-card,
+.species-card,
+.breed-card,
+.dashboard-breed-card,
+.all-breed-card,
+.history-card,
+.stats-card,
+.stats-panel,
+.summary-card,
+.notice-card,
+.filters-card,
+.empty-card {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+}
+
+.species-card,
+.breed-card,
+.dashboard-breed-card,
+.all-breed-card,
+.history-card {
+    transition: transform .15s ease, border-color .15s ease;
+}
+
+.species-card:hover,
+.breed-card:hover,
+.dashboard-breed-card:hover,
+.all-breed-card:hover,
+.history-card:hover {
+    transform: translateY(-2px);
+    border-color: #4b5563;
+}
+
+button {
+    transition: .15s ease;
+}
+
+button:hover {
+    filter: brightness(1.08);
+}
+
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+}
+
+@media (max-width: 900px) {
+    .layout {
+        display: block;
+    }
+
+    .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #1f2937;
+        padding: 14px;
+    }
+
+    .sidebar-brand {
+        margin-bottom: 12px;
+    }
+
+    .sidebar-nav {
+        display: flex;
+        overflow-x: auto;
+        gap: 8px;
+        padding-bottom: 4px;
+    }
+
+    .sidebar-section {
+        display: none;
+    }
+
+    .sidebar button {
+        white-space: nowrap;
+        width: auto;
+    }
+
+    .main {
+        width: 100%;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .header-user {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .header-user-info {
+        text-align: left;
+    }
+}
+
+@media (max-width: 600px) {
+    .content {
+        padding: 18px;
+    }
+
+    .page-header h1 {
+        font-size: 28px;
+    }
+
+    .form-actions,
+    .breed-actions,
+    .species-actions,
+    .user-actions {
+        flex-direction: column;
+    }
+
+    .breed-values,
+    .history-values {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-summary,
+    .stats-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}

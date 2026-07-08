@@ -363,3 +363,32 @@ textarea:focus {
         grid-template-columns: 1fr;
     }
 }
+
+.sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 999px;
+}
+
+@media (max-width: 900px) {
+    .sidebar {
+        position: relative;
+        height: auto;
+        overflow-y: visible;
+    }
+}

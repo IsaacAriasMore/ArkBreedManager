@@ -141,3 +141,16 @@
     filter: none;
     opacity: .75;
 }
+
+.breed-card > img,
+.breed-card img,
+.dashboard-breed-card > img,
+.dashboard-breed-card img {
+    width: 100%;
+    height: 210px;
+    object-fit: contain;
+    object-position: center;
+    background: radial-gradient(circle at center, #1f2937 0%, #0f172a 100%);
+    padding: 14px;
+    display: block;
+}

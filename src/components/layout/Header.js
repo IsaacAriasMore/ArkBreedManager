@@ -9,7 +9,8 @@ const pageTitles = {
     breeds: "Administrar Breeds",
     history: "Historial",
     statistics: "Estadísticas",
-    inis: "INIs"
+    inis: "INIs",
+    mapsBosses: "Mapas & Bosses"
 };
 
 export function Header() {

@@ -11,6 +11,7 @@ import { BreedsPage } from "./pages/breeds";
 import { StatisticsPage } from "./pages/statistics";
 import { HistoryPage } from "./pages/history";
 import { InisPage } from "./pages/inis";
+import { MapsBossesPage } from "./pages/mapsBosses";
 
 const pages = {
     dashboard: {
@@ -25,6 +26,11 @@ const pages = {
 
     inis: {
         component: InisPage,
+        roles: ["admin", "breeder"]
+    },
+
+    mapsBosses: {
+        component: MapsBossesPage,
         roles: ["admin", "breeder"]
     },
 

@@ -10,10 +10,21 @@ import { UsersPage } from "./pages/users";
 import { BreedsPage } from "./pages/breeds";
 import { StatisticsPage } from "./pages/statistics";
 import { HistoryPage } from "./pages/history";
+import { InisPage } from "./pages/inis";
 
 const pages = {
     dashboard: {
         component: DashboardPage,
+        roles: ["admin", "breeder"]
+    },
+
+    allBreeds: {
+        component: AllBreedsPage,
+        roles: ["admin", "breeder"]
+    },
+
+    inis: {
+        component: InisPage,
         roles: ["admin", "breeder"]
     },
 
@@ -40,11 +51,7 @@ const pages = {
     statistics: {
         component: StatisticsPage,
         roles: ["admin", "breeder"]
-    },
-    allBreeds: {
-    component: AllBreedsPage,
-    roles: ["admin", "breeder"]
-},
+    }
 };
 
 export async function initApp() {

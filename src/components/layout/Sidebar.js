@@ -4,6 +4,7 @@ export function Sidebar() {
     setTimeout(() => {
         bindSidebarButton("btnDashboard", "dashboard");
         bindSidebarButton("btnAllBreeds", "allBreeds");
+        bindSidebarButton("btnInis", "inis");
         bindSidebarButton("btnHistory", "history");
         bindSidebarButton("btnStatistics", "statistics");
 
@@ -24,6 +25,7 @@ export function Sidebar() {
             <nav class="sidebar-nav">
                 ${navButton("btnDashboard", "dashboard", "Dashboard")}
                 ${navButton("btnAllBreeds", "allBreeds", "Todos los Breeds")}
+                ${navButton("btnInis", "inis", "INIs")}
 
                 ${AppStore.isAdmin() ? `
                     <div class="sidebar-section">Administración</div>

@@ -8,7 +8,8 @@ const pageTitles = {
     users: "Usuarios",
     breeds: "Administrar Breeds",
     history: "Historial",
-    statistics: "Estadísticas"
+    statistics: "Estadísticas",
+    inis: "INIs"
 };
 
 export function Header() {

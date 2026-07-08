@@ -1,0 +1,33 @@
+
+[functions.notify-discord-ini]
+enabled = true
+verify_jwt = false
+import_map = "./functions/notify-discord-ini/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/notify-discord-ini/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/notify-discord-ini/*.html" ]
+
+[functions.notify-discord-mutation]
+enabled = true
+verify_jwt = false
+import_map = "./functions/notify-discord-mutation/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/notify-discord-mutation/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/notify-discord-mutation/*.html" ]
+
+[functions.notify-discord-propagators]
+enabled = true
+verify_jwt = false
+import_map = "./functions/notify-discord-propagators/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/notify-discord-propagators/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/notify-discord-propagators/*.html" ]

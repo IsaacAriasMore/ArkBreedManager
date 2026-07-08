@@ -1,0 +1,217 @@
+.ini-form-card {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 16px;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    margin-bottom: 26px;
+    max-width: 760px;
+}
+
+.ini-form-card input,
+.ini-form-card select,
+.ini-form-card textarea {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: white;
+}
+
+.ini-form-card textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+#iniContent {
+    min-height: 260px;
+    font-family: monospace;
+}
+
+.ini-upload-label {
+    color: #d1d5db;
+    display: grid;
+    gap: 8px;
+}
+
+.ini-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #d1d5db;
+}
+
+.ini-filters {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 16px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.ini-filters input,
+.ini-filters select {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #374151;
+    background: #111827;
+    color: white;
+}
+
+.ini-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 24px;
+}
+
+.ini-card {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+}
+
+.ini-card img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+}
+
+.ini-card-body {
+    padding: 18px;
+}
+
+.ini-card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.ini-card-top h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.ini-category {
+    background: #2563eb;
+    color: white;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ini-public,
+.ini-private {
+    height: fit-content;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ini-public {
+    background: #16a34a;
+    color: white;
+}
+
+.ini-private {
+    background: #6b7280;
+    color: white;
+}
+
+.ini-description {
+    color: #d1d5db;
+    margin-bottom: 14px;
+}
+
+.ini-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.ini-stats strong {
+    color: white;
+}
+
+.ini-details {
+    background: #111827;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+
+.ini-details summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.ini-details pre {
+    margin-top: 12px;
+    overflow-x: auto;
+    max-height: 340px;
+    color: #d1d5db;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.ini-actions,
+.ini-admin-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.ini-actions {
+    margin-bottom: 10px;
+}
+
+.copy-ini-btn,
+.download-ini-btn,
+.edit-ini-btn,
+.delete-ini-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.copy-ini-btn {
+    background: #2563eb;
+}
+
+.download-ini-btn {
+    background: #16a34a;
+}
+
+.edit-ini-btn {
+    background: #7c3aed;
+}
+
+.delete-ini-btn {
+    background: #dc2626;
+}
+
+@media (max-width: 760px) {
+    .ini-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .ini-actions,
+    .ini-admin-actions {
+        flex-direction: column;
+    }
+}

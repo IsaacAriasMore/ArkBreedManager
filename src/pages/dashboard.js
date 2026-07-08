@@ -4,7 +4,8 @@ import { isPropagatorAvailable } from "../utils/validation";
 import { showSuccess, showError, showWarning } from "../utils/feedback";
 import {
     getActiveBreedsWithPropagators,
-    registerMutation
+    registerMutation,
+    notifyDiscordMutation
 } from "../services/breedService";
 import { AppStore } from "../stores/appStore";
 
@@ -259,6 +260,13 @@ function initDashboardEvents(breeds) {
 }
 
 showSuccess("Mutación registrada correctamente.");
+
+const { error: discordError } = await notifyDiscordMutation(breed.id);
+
+if (discordError) {
+    console.warn("Discord mutation notification error:", discordError);
+    showWarning("Mutación guardada, pero no se pudo avisar en Discord.");
+}
 
 AppStore.setPage("dashboard");
 

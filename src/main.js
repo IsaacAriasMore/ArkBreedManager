@@ -8,6 +8,7 @@ import "./css/history.css";
 import "./css/statistics.css";
 import "./css/allBreeds.css";
 import "./css/feedback.css";
+import "./css/inis.css";
 
 import { setupFeedback } from "./utils/feedback";
 import { initApp } from "./App";

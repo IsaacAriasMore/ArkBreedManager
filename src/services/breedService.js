@@ -136,3 +136,22 @@ export async function registerMutation({
         p_notes: notes || null
     });
 }
+export async function notifyDiscordMutation(breedId) {
+    const { data, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !data?.session) {
+        return {
+            data: null,
+            error: sessionError || new Error("No hay sesión activa.")
+        };
+    }
+
+    return await supabase.functions.invoke("notify-discord-mutation", {
+        body: {
+            breedId
+        },
+        headers: {
+            Authorization: `Bearer ${data.session.access_token}`
+        }
+    });
+}

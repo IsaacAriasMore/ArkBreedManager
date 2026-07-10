@@ -65,6 +65,24 @@ export async function deleteMonitoredServer(id) {
         .eq("id", id);
 }
 
+export async function updateServerAlertSettings({
+    serverId,
+    alertsEnabled,
+    alertFromTime = "00:00",
+    alertToTime = "08:00"
+}) {
+    return await supabase
+        .from("monitored_servers")
+        .update({
+            alerts_enabled: alertsEnabled,
+            alert_from_time: alertFromTime,
+            alert_to_time: alertToTime
+        })
+        .eq("id", serverId)
+        .select()
+        .single();
+}
+
 export async function getServerTopPlayers(serverId, limit = 10) {
     return await supabase
         .from("server_player_totals")
@@ -113,6 +131,11 @@ export async function getServerPlayerAliases(serverId) {
             battlemetrics_name,
             alias,
             notes,
+            threat_level,
+            alert_enabled,
+            alert_channel,
+            alert_cooldown_minutes,
+            last_alert_sent_at,
             updated_at
         `)
         .eq("server_id", serverId);
@@ -125,7 +148,11 @@ export async function saveServerPlayerAlias({
     detectedName,
     battlemetricsName,
     alias,
-    notes
+    notes,
+    threatLevel,
+    alertEnabled,
+    alertChannel,
+    alertCooldownMinutes
 }) {
     return await supabase
         .from("server_player_aliases")
@@ -137,7 +164,11 @@ export async function saveServerPlayerAlias({
                 detected_name: detectedName,
                 battlemetrics_name: battlemetricsName,
                 alias: alias?.trim() || null,
-                notes: notes?.trim() || null
+                notes: notes?.trim() || null,
+                threat_level: threatLevel || "known",
+                alert_enabled: Boolean(alertEnabled),
+                alert_channel: alertChannel || "discord",
+                alert_cooldown_minutes: Number(alertCooldownMinutes) || 30
             },
             {
                 onConflict: "server_id,identity_type,identity_key"
@@ -145,6 +176,28 @@ export async function saveServerPlayerAlias({
         )
         .select()
         .single();
+}
+
+export async function getServerRecentAlerts(serverId, limit = 8) {
+    return await supabase
+        .from("server_player_alerts")
+        .select(`
+            id,
+            server_id,
+            identity_type,
+            identity_key,
+            detected_name,
+            battlemetrics_name,
+            alias,
+            threat_level,
+            channel,
+            message,
+            sent_at,
+            created_at
+        `)
+        .eq("server_id", serverId)
+        .order("sent_at", { ascending: false })
+        .limit(limit);
 }
 
 export async function syncBattlemetricsServer(serverId) {

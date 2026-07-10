@@ -9,9 +9,11 @@ import {
     getMonitoredServers,
     getServerActiveSessions,
     getServerPlayerAliases,
+    getServerRecentAlerts,
     getServerTopPlayers,
     saveServerPlayerAlias,
-    syncBattlemetricsServer
+    syncBattlemetricsServer,
+    updateServerAlertSettings
 } from "../services/serverMonitorService";
 
 let selectedServerId = localStorage.getItem("selectedMonitorServerId") || null;
@@ -57,10 +59,16 @@ export async function ServerMonitorPage() {
         ? await getServerPlayerAliases(selectedServer.id)
         : { data: [] };
 
+    const recentAlertsResult = selectedServer
+    ? await getServerRecentAlerts(selectedServer.id, 8)
+    : { data: [] };
+
     const aliasMap = createAliasMap(aliasesResult.data || []);
 
     const activeSessions = applyAliases(activeSessionsResult.data || [], aliasMap);
     let topPlayers = applyAliases(topPlayersResult.data || [], aliasMap);
+
+    const recentAlerts = recentAlertsResult.data || [];
 
     if (minHoursFilter > 0) {
         topPlayers = topPlayers.filter(player => player.total_minutes >= minHoursFilter * 60);
@@ -104,7 +112,7 @@ export async function ServerMonitorPage() {
             </aside>
 
             <main class="server-monitor-main">
-                ${selectedServer ? renderSelectedServer(selectedServer, activeSessions, topPlayers) : renderEmptyState()}
+                ${selectedServer ? renderSelectedServer(selectedServer, activeSessions, topPlayers, recentAlerts) : renderEmptyState()}
             </main>
         </section>
 
@@ -165,7 +173,7 @@ function renderServerButton(server) {
     `;
 }
 
-function renderSelectedServer(server, activeSessions, topPlayers) {
+function renderSelectedServer(server, activeSessions, topPlayers, recentAlerts) {
     const longestOnline = getLongestActivePlayer(activeSessions);
     const topAccumulated = topPlayers[0] || null;
     const overEightHoursCount = getOverHoursCount(topPlayers, 8);
@@ -179,6 +187,15 @@ function renderSelectedServer(server, activeSessions, topPlayers) {
                 <p>${escapeHtml(formatServerAddress(server))}</p>
 
                 <div class="server-meta-pills">
+                <span>
+    <small>Alertas</small>
+    <strong>
+        ${server.alerts_enabled
+            ? `${server.alert_from_time?.slice(0, 5) || "00:00"} - ${server.alert_to_time?.slice(0, 5) || "08:00"}`
+            : "OFF"
+        }
+    </strong>
+</span>
                     <span>
                         <small>Mapa</small>
                         <strong>${escapeHtml(server.map_name || "Pendiente")}</strong>
@@ -197,7 +214,17 @@ function renderSelectedServer(server, activeSessions, topPlayers) {
             </div>
 
             <div class="server-hero-actions">
+            ${AppStore.isAdmin() ? `
+    <button
+        class="server-alert-toggle ${server.alerts_enabled ? "active" : ""}"
+        data-toggle-server-alerts="${server.id}"
+        data-alerts-enabled="${server.alerts_enabled ? "true" : "false"}"
+    >
+        ${server.alerts_enabled ? "Alertas ON" : "Alertas OFF"}
+    </button>
+` : ""}
                 ${AppStore.isAdmin() ? `
+                    
                     <button
                         class="danger-outline-btn"
                         data-delete-server-id="${server.id}"
@@ -250,7 +277,9 @@ function renderSelectedServer(server, activeSessions, topPlayers) {
 
         ${renderIdentificationNotice(activeSessions)}
 
-        <section class="monitor-panel">
+${renderRecentAlertsPanel(recentAlerts)}
+
+<section class="monitor-panel">
             <div class="section-title-row">
                 <div>
                     <h2>Jugadores online ahora</h2>
@@ -346,6 +375,7 @@ function renderOnlineTable(serverId, players) {
                                 `}
 
                                 ${player.notes ? `<em>${escapeHtml(player.notes)}</em>` : ""}
+                                ${renderPlayerAlertMiniStatus(player)}
                             </td>
 
                             <td>
@@ -420,6 +450,7 @@ function renderTopTable(players) {
                                 `}
 
                                 ${player.notes ? `<em>${escapeHtml(player.notes)}</em>` : ""}
+                                ${renderPlayerAlertMiniStatus(player)}
                             </td>
 
                             <td>
@@ -483,6 +514,51 @@ function renderAliasModal(player) {
                         >
                     </div>
 
+                    <div class="alias-form-grid">
+                        <div>
+                            <label>Nivel del jugador</label>
+                            <select id="aliasThreatLevel">
+                                <option value="known" ${player.threat_level === "known" || !player.threat_level ? "selected" : ""}>Conocido</option>
+                                <option value="suspect" ${player.threat_level === "suspect" ? "selected" : ""}>Sospechoso</option>
+                                <option value="enemy" ${player.threat_level === "enemy" ? "selected" : ""}>Enemigo</option>
+                                <option value="ally" ${player.threat_level === "ally" ? "selected" : ""}>Aliado</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label>Canal de alerta</label>
+                            <select id="aliasAlertChannel">
+                                <option value="discord" ${player.alert_channel === "discord" || !player.alert_channel ? "selected" : ""}>Discord</option>
+                                <option value="whatsapp" ${player.alert_channel === "whatsapp" ? "selected" : ""} disabled>WhatsApp próximamente</option>
+                                <option value="both" ${player.alert_channel === "both" ? "selected" : ""} disabled>Ambos próximamente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label class="alias-checkbox-row">
+                        <input
+                            id="aliasAlertEnabled"
+                            type="checkbox"
+                            ${player.alert_enabled ? "checked" : ""}
+                        >
+
+                        <span>
+                            Notificar si este jugador se une al mapa
+                            <small>Usa el horario del servidor: 12:00 a.m. - 8:00 a.m. por defecto.</small>
+                        </span>
+                    </label>
+
+                    <div>
+                        <label>Cooldown de alerta</label>
+                        <input
+                            id="aliasAlertCooldown"
+                            type="number"
+                            min="5"
+                            step="5"
+                            value="${escapeHtml(player.alert_cooldown_minutes || 30)}"
+                        >
+                    </div>
+
                     <div>
                         <label>Notas</label>
                         <textarea
@@ -506,6 +582,78 @@ function renderAliasModal(player) {
         </div>
     `;
 }
+function renderPlayerAlertMiniStatus(player) {
+    if (!player.alert_enabled) {
+        return "";
+    }
+
+    return `
+        <span class="player-alert-mini active">
+            🔔 Notificación activa
+        </span>
+    `;
+}
+
+function renderRecentAlertsPanel(alerts) {
+    return `
+        <details class="recent-alerts-card">
+            <summary>
+                <div>
+                    <strong>Últimas alertas Discord</strong>
+                    <span>${alerts.length > 0 ? `${alerts.length} recientes` : "Sin alertas todavía"}</span>
+                </div>
+
+                <small>Ver alertas</small>
+            </summary>
+
+            ${alerts.length === 0 ? `
+                <div class="recent-alerts-empty">
+                    Aún no hay alertas enviadas para este servidor.
+                </div>
+            ` : `
+                <div class="recent-alerts-list">
+                    ${alerts.map(alert => `
+                        <article class="recent-alert-item">
+                            <div>
+                                <strong>${escapeHtml(alert.alias || "Sin sobrenombre")}</strong>
+                                <span>${escapeHtml(alert.detected_name || "Desconocido")} • ${escapeHtml(alert.battlemetrics_name || "Desconocido")}</span>
+                            </div>
+
+                            <div class="recent-alert-meta">
+                                ${renderThreatPill(alert.threat_level)}
+                                <span>${escapeHtml(alert.channel || "discord")}</span>
+                                <time>${escapeHtml(formatDateTime(alert.sent_at))}</time>
+                            </div>
+                        </article>
+                    `).join("")}
+                </div>
+            `}
+        </details>
+    `;
+}
+
+function renderThreatPill(threatLevel) {
+    const labels = {
+        known: "Conocido",
+        suspect: "Sospechoso",
+        enemy: "Enemigo",
+        ally: "Aliado"
+    };
+
+    const className = {
+        known: "known",
+        suspect: "suspect",
+        enemy: "enemy",
+        ally: "ally"
+    }[threatLevel] || "known";
+
+    return `
+        <span class="threat-pill ${className}">
+            ${labels[threatLevel] || "Conocido"}
+        </span>
+    `;
+}
+
 function renderIdentificationNotice(players) {
     if (!players || players.length === 0) {
         return "";
@@ -659,7 +807,12 @@ function applyAliases(players, aliasMap) {
         return {
             ...player,
             alias: alias?.alias || null,
-            notes: alias?.notes || null
+            notes: alias?.notes || null,
+            threat_level: alias?.threat_level || "known",
+            alert_enabled: Boolean(alias?.alert_enabled),
+            alert_channel: alias?.alert_channel || "discord",
+            alert_cooldown_minutes: alias?.alert_cooldown_minutes || 30,
+            last_alert_sent_at: alias?.last_alert_sent_at || null
         };
     });
 }
@@ -676,7 +829,11 @@ function encodePlayerPayload(serverId, player) {
         detected_name: player.detected_name,
         battlemetrics_name: player.battlemetrics_name,
         alias: player.alias || "",
-        notes: player.notes || ""
+        notes: player.notes || "",
+        threat_level: player.threat_level || "known",
+        alert_enabled: Boolean(player.alert_enabled),
+        alert_channel: player.alert_channel || "discord",
+        alert_cooldown_minutes: player.alert_cooldown_minutes || 30
     };
 
     return encodeURIComponent(JSON.stringify(payload));
@@ -701,6 +858,32 @@ function closeAliasModal() {
 }
 
 function initServerMonitorEvents() {
+    document.querySelectorAll("[data-toggle-server-alerts]").forEach(button => {
+    button.addEventListener("click", async () => {
+        const serverId = button.dataset.toggleServerAlerts;
+        const currentValue = button.dataset.alertsEnabled === "true";
+        const newValue = !currentValue;
+
+        const { error } = await updateServerAlertSettings({
+            serverId,
+            alertsEnabled: newValue,
+            alertFromTime: "00:00",
+            alertToTime: "08:00"
+        });
+
+        if (error) {
+            showError("No se pudo actualizar las alertas del servidor.");
+            return;
+        }
+
+        showSuccess(newValue
+            ? "Alertas del mapa activadas."
+            : "Alertas del mapa desactivadas."
+        );
+
+        AppStore.setPage("serverMonitor");
+    });
+});
     document.querySelector("#refreshServerMonitorBtn")?.addEventListener("click", () => {
         AppStore.setPage("serverMonitor");
     });
@@ -807,17 +990,24 @@ function initServerMonitorEvents() {
         const battlemetricsName = document.querySelector("#aliasBattlemetricsName")?.value;
         const alias = document.querySelector("#aliasInput")?.value;
         const notes = document.querySelector("#aliasNotesInput")?.value;
+        const threatLevel = document.querySelector("#aliasThreatLevel")?.value;
+const alertEnabled = document.querySelector("#aliasAlertEnabled")?.checked;
+const alertChannel = document.querySelector("#aliasAlertChannel")?.value;
+const alertCooldownMinutes = document.querySelector("#aliasAlertCooldown")?.value;
 
         const { error } = await saveServerPlayerAlias({
-            serverId,
-            identityType,
-            identityKey,
-            detectedName,
-            battlemetricsName,
-            alias,
-            notes
-        });
-
+    serverId,
+    identityType,
+    identityKey,
+    detectedName,
+    battlemetricsName,
+    alias,
+    notes,
+    threatLevel,
+    alertEnabled,
+    alertChannel,
+    alertCooldownMinutes
+});
         if (error) {
             showError("No se pudo guardar el sobrenombre.");
             return;

@@ -13,6 +13,20 @@ const IDENTITY_TYPES = {
     TEMPORARY_SESSION: "temporary_session"
 };
 
+const THREAT_LABELS: Record<string, string> = {
+    known: "Conocido",
+    suspect: "Sospechoso",
+    enemy: "Enemigo",
+    ally: "Aliado"
+};
+
+const THREAT_COLORS: Record<string, number> = {
+    known: 3447003,
+    suspect: 16776960,
+    enemy: 15158332,
+    ally: 5763719
+};
+
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {
         return jsonResponse({ ok: true });
@@ -160,6 +174,16 @@ async function syncOneServer(supabaseAdmin: any, server: any) {
     const serverName = serverAttributes.name || server.name;
     const battlemetricsServerId = String(serverResource.id);
 
+    const updatedServer = {
+        ...server,
+        battlemetrics_server_id: battlemetricsServerId,
+        server_name: serverName,
+        map_name: mapName,
+        current_players: currentPlayers,
+        max_players: maxPlayers,
+        last_synced_at: new Date().toISOString()
+    };
+
     await supabaseAdmin
         .from("monitored_servers")
         .update({
@@ -168,13 +192,13 @@ async function syncOneServer(supabaseAdmin: any, server: any) {
             map_name: mapName,
             current_players: currentPlayers,
             max_players: maxPlayers,
-            last_synced_at: new Date().toISOString()
+            last_synced_at: updatedServer.last_synced_at
         })
         .eq("id", server.id);
 
     const syncResult = await syncPlayerSessions({
         supabaseAdmin,
-        serverId: server.id,
+        server: updatedServer,
         players: normalizedPlayers
     });
 
@@ -360,11 +384,11 @@ function normalizePlayers(players: any[]) {
 
 async function syncPlayerSessions({
     supabaseAdmin,
-    serverId,
+    server,
     players
 }: {
     supabaseAdmin: any;
-    serverId: string;
+    server: any;
     players: any[];
 }) {
     const now = new Date();
@@ -373,7 +397,7 @@ async function syncPlayerSessions({
     const { data: activeSessions } = await supabaseAdmin
         .from("server_player_sessions")
         .select("*")
-        .eq("server_id", serverId)
+        .eq("server_id", server.id)
         .eq("is_active", true);
 
     const activeSessionList = activeSessions || [];
@@ -384,6 +408,8 @@ async function syncPlayerSessions({
     let created = 0;
     let updated = 0;
     let closed = 0;
+    let alertsSent = 0;
+    let alertsSkipped = 0;
 
     for (const player of players) {
         const sessionKey = `${player.identity_type}:${player.identity_key}`;
@@ -411,7 +437,7 @@ async function syncPlayerSessions({
             await supabaseAdmin
                 .from("server_player_sessions")
                 .insert({
-                    server_id: serverId,
+                    server_id: server.id,
                     identity_type: player.identity_type,
                     identity_key: player.identity_key,
                     detected_name: player.detected_name,
@@ -423,11 +449,24 @@ async function syncPlayerSessions({
                 });
 
             created++;
+
+            const alertResult = await maybeSendJoinAlert({
+                supabaseAdmin,
+                server,
+                player,
+                now
+            });
+
+            if (alertResult.sent) {
+                alertsSent++;
+            } else if (alertResult.checked) {
+                alertsSkipped++;
+            }
         }
 
         await updatePlayerTotal({
             supabaseAdmin,
-            serverId,
+            serverId: server.id,
             player,
             now
         });
@@ -460,7 +499,207 @@ async function syncPlayerSessions({
         closed++;
     }
 
-    return { created, updated, closed };
+    return {
+        created,
+        updated,
+        closed,
+        alerts_sent: alertsSent,
+        alerts_skipped: alertsSkipped
+    };
+}
+
+async function maybeSendJoinAlert({
+    supabaseAdmin,
+    server,
+    player,
+    now
+}: {
+    supabaseAdmin: any;
+    server: any;
+    player: any;
+    now: Date;
+}) {
+    if (!server.alerts_enabled) {
+        return { checked: false, sent: false, reason: "server_alerts_disabled" };
+    }
+
+    const { data: alias } = await supabaseAdmin
+        .from("server_player_aliases")
+        .select("*")
+        .eq("server_id", server.id)
+        .eq("identity_type", player.identity_type)
+        .eq("identity_key", player.identity_key)
+        .maybeSingle();
+
+    if (!alias || !alias.alert_enabled) {
+        return { checked: true, sent: false, reason: "player_alert_disabled" };
+    }
+
+    if (!["discord", "both"].includes(alias.alert_channel || "discord")) {
+        return { checked: true, sent: false, reason: "channel_not_enabled_yet" };
+    }
+
+    const fromTime = String(server.alert_from_time || "00:00").slice(0, 5);
+    const toTime = String(server.alert_to_time || "08:00").slice(0, 5);
+
+    if (!isNowWithinTimeWindow(fromTime, toTime)) {
+        return { checked: true, sent: false, reason: "outside_alert_window" };
+    }
+
+    if (alias.last_alert_sent_at) {
+        const lastAlert = new Date(alias.last_alert_sent_at);
+        const cooldownMinutes = Number(alias.alert_cooldown_minutes || 30);
+        const minutesSinceLastAlert = minutesBetween(lastAlert, now);
+
+        if (minutesSinceLastAlert < cooldownMinutes) {
+            return { checked: true, sent: false, reason: "cooldown_active" };
+        }
+    }
+
+    const discordResult = await sendDiscordPlayerJoinAlert({
+        server,
+        player,
+        alias,
+        now
+    });
+
+    if (!discordResult.ok) {
+        return {
+            checked: true,
+            sent: false,
+            reason: "discord_failed",
+            details: discordResult.error
+        };
+    }
+
+    const nowIso = now.toISOString();
+
+    await supabaseAdmin
+        .from("server_player_aliases")
+        .update({
+            last_alert_sent_at: nowIso
+        })
+        .eq("id", alias.id);
+
+    await supabaseAdmin
+        .from("server_player_alerts")
+        .insert({
+            server_id: server.id,
+            alias_id: alias.id,
+            identity_type: player.identity_type,
+            identity_key: player.identity_key,
+            detected_name: player.detected_name,
+            battlemetrics_name: player.battlemetrics_name,
+            alias: alias.alias,
+            threat_level: alias.threat_level,
+            channel: "discord",
+            message: "Jugador marcado conectado.",
+            sent_at: nowIso
+        });
+
+    return { checked: true, sent: true, reason: "sent" };
+}
+
+async function sendDiscordPlayerJoinAlert({
+    server,
+    player,
+    alias,
+    now
+}: {
+    server: any;
+    player: any;
+    alias: any;
+    now: Date;
+}) {
+    const discordWebhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL");
+
+    if (!discordWebhookUrl) {
+        return {
+            ok: false,
+            error: "Falta DISCORD_WEBHOOK_URL."
+        };
+    }
+
+    const threatLevel = alias.threat_level || "known";
+    const threatLabel = THREAT_LABELS[threatLevel] || "Conocido";
+    const aliasName = alias.alias || "Sin sobrenombre";
+    const detectedName = player.detected_name || "Desconocido";
+    const battlemetricsName = player.battlemetrics_name || "Desconocido";
+    const mapName = server.map_name || "Mapa desconocido";
+    const serverName = server.server_name || server.name || "Servidor ARK";
+
+    const discordPayload = {
+        username: "ArkBreed",
+        content: threatLevel === "enemy"
+            ? "🚨 Enemigo conectado"
+            : threatLevel === "suspect"
+                ? "⚠️ Sospechoso conectado"
+                : "🔔 Jugador marcado conectado",
+        embeds: [
+            {
+                title: `${aliasName} se conectó`,
+                description: `Jugador marcado detectado en **${mapName}**.`,
+                color: THREAT_COLORS[threatLevel] || 3447003,
+                fields: [
+                    {
+                        name: "Servidor",
+                        value: String(serverName).slice(0, 1024),
+                        inline: false
+                    },
+                    {
+                        name: "Mapa",
+                        value: String(mapName).slice(0, 1024),
+                        inline: true
+                    },
+                    {
+                        name: "Nivel",
+                        value: threatLabel,
+                        inline: true
+                    },
+                    {
+                        name: "Alias ArkBreed",
+                        value: String(aliasName).slice(0, 1024),
+                        inline: true
+                    },
+                    {
+                        name: "Nombre en juego",
+                        value: String(detectedName).slice(0, 1024),
+                        inline: true
+                    },
+                    {
+                        name: "Nombre BattleMetrics",
+                        value: String(battlemetricsName).slice(0, 1024),
+                        inline: true
+                    },
+                    {
+                        name: "Identificación",
+                        value: getIdentityLabel(player.identity_type),
+                        inline: true
+                    }
+                ],
+                timestamp: now.toISOString()
+            }
+        ]
+    };
+
+    const response = await fetch(discordWebhookUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(discordPayload)
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+
+        return {
+            ok: false,
+            error: text
+        };
+    }
+
+    return { ok: true };
 }
 
 async function updatePlayerTotal({
@@ -585,6 +824,52 @@ function isWeakName(value: string) {
 
 function minutesBetween(start: Date, end: Date) {
     return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
+}
+
+function isNowWithinTimeWindow(fromTime: string, toTime: string) {
+    const timezone = Deno.env.get("ALERT_TIMEZONE") || "America/Costa_Rica";
+
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+
+    const parts = formatter.formatToParts(new Date());
+    const hour = Number(parts.find(part => part.type === "hour")?.value || 0);
+    const minute = Number(parts.find(part => part.type === "minute")?.value || 0);
+    const currentMinutes = hour * 60 + minute;
+
+    const fromMinutes = timeToMinutes(fromTime);
+    const toMinutes = timeToMinutes(toTime);
+
+    if (fromMinutes === toMinutes) {
+        return true;
+    }
+
+    if (fromMinutes < toMinutes) {
+        return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
+    }
+
+    return currentMinutes >= fromMinutes || currentMinutes <= toMinutes;
+}
+
+function timeToMinutes(value: string) {
+    const [hourText, minuteText] = String(value || "00:00").split(":");
+
+    return (Number(hourText) || 0) * 60 + (Number(minuteText) || 0);
+}
+
+function getIdentityLabel(identityType: string) {
+    const labels: Record<string, string> = {
+        battlemetrics_id: "ID único",
+        steam_name_unique: "Nombre único",
+        name_only: "Nombre visible",
+        temporary_session: "Temporal"
+    };
+
+    return labels[identityType] || "No verificado";
 }
 
 async function safeReadJson(req: Request) {

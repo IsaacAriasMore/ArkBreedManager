@@ -12,6 +12,7 @@ import { StatisticsPage } from "./pages/statistics";
 import { HistoryPage } from "./pages/history";
 import { InisPage } from "./pages/inis";
 import { MapsBossesPage } from "./pages/mapsBosses";
+import { ServerMonitorPage } from "./pages/serverMonitor";
 
 const pages = {
     dashboard: {
@@ -56,6 +57,10 @@ const pages = {
 
     statistics: {
         component: StatisticsPage,
+        roles: ["admin", "breeder"]
+    },
+    serverMonitor: {
+        component: ServerMonitorPage,
         roles: ["admin", "breeder"]
     }
 };

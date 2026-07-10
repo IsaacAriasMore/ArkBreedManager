@@ -4,13 +4,14 @@ import { logout } from "../../services/authService";
 const pageTitles = {
     dashboard: "Dashboard",
     allBreeds: "Todos los Breeds",
+    inis: "INIs",
+    mapsBosses: "Mapas & Bosses",
+    serverMonitor: "Monitor Server",
     species: "Especies",
     users: "Usuarios",
     breeds: "Administrar Breeds",
     history: "Historial",
-    statistics: "Estadísticas",
-    inis: "INIs",
-    mapsBosses: "Mapas & Bosses"
+    statistics: "Estadísticas"
 };
 
 export function Header() {
@@ -21,7 +22,6 @@ export function Header() {
 
         logoutButton.addEventListener("click", async () => {
             await logout();
-
             AppStore.clearAuth();
         });
     });
@@ -35,13 +35,8 @@ export function Header() {
 
             <div class="header-user">
                 <div class="header-user-info">
-                    <strong>
-                        ${AppStore.profile?.name || "Usuario"}
-                    </strong>
-
-                    <small>
-                        ${AppStore.profile?.role || ""}
-                    </small>
+                    <strong>${AppStore.profile?.name || "Usuario"}</strong>
+                    <small>${AppStore.profile?.role || ""}</small>
                 </div>
 
                 <button id="logoutBtn">

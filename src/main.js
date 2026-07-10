@@ -10,6 +10,7 @@ import "./css/allBreeds.css";
 import "./css/feedback.css";
 import "./css/inis.css";
 import "./css/mapsBosses.css";
+import "./css/serverMonitor.css";
 
 import { setupFeedback } from "./utils/feedback";
 import { initApp } from "./App";

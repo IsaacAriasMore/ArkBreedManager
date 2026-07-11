@@ -19,6 +19,8 @@ import {
 let selectedServerId = localStorage.getItem("selectedMonitorServerId") || null;
 let topLimit = Number(localStorage.getItem("serverMonitorTopLimit") || 10);
 let minHoursFilter = Number(localStorage.getItem("serverMonitorMinHours") || 0);
+let serverMonitorSearch = localStorage.getItem("serverMonitorSearch") || "";
+let addServerExpanded = localStorage.getItem("addServerExpanded") === "true";
 let editingAliasPlayer = null;
 
 export async function ServerMonitorPage() {
@@ -34,6 +36,8 @@ export async function ServerMonitorPage() {
     }
 
     const serverList = servers || [];
+    const filteredServerList = filterServersBySearch(serverList, serverMonitorSearch);
+const showAddServerForm = AppStore.isAdmin() && (addServerExpanded || serverList.length === 0);
 
     if (!selectedServerId && serverList.length > 0) {
         selectedServerId = serverList[0].id;
@@ -90,47 +94,88 @@ export async function ServerMonitorPage() {
             </button>
         </div>
 
-        ${AppStore.isAdmin() ? renderAddServerForm() : ""}
+       
 
-        <section class="server-monitor-layout">
-            <aside class="server-list-card">
-                <div class="section-title-row">
-                    <h2>Servidores</h2>
-                    <span>${serverList.length}</span>
-                </div>
+        <section class="server-monitor-layout improved-monitor-layout">
+    <aside class="server-list-card improved-server-list-card">
+        <div class="section-title-row">
+            <h2>Servidores</h2>
+            <span>${serverList.length}</span>
+        </div>
 
-                ${serverList.length === 0 ? `
-                    <div class="empty-monitor-box">
-                        <strong>No hay servidores agregados.</strong>
-                        <p>Agrega una IP para empezar a monitorear.</p>
-                    </div>
-                ` : `
-                    <div class="server-list">
-                        ${serverList.map(server => renderServerButton(server)).join("")}
-                    </div>
-                `}
-            </aside>
+        <form id="serverSearchForm" class="server-search-form">
+            <input
+                id="serverSearchInput"
+                type="search"
+                placeholder="Buscar mapa, IP o nombre..."
+                value="${escapeHtml(serverMonitorSearch)}"
+            >
 
-            <main class="server-monitor-main">
-                ${selectedServer ? renderSelectedServer(selectedServer, activeSessions, topPlayers, recentAlerts) : renderEmptyState()}
-            </main>
-        </section>
+            <button type="submit">
+                Buscar
+            </button>
+        </form>
 
-        ${editingAliasPlayer ? renderAliasModal(editingAliasPlayer) : ""}
+        ${serverMonitorSearch ? `
+            <button id="clearServerSearchBtn" class="clear-server-search-btn">
+                Limpiar búsqueda
+            </button>
+        ` : ""}
+
+        ${serverList.length === 0 ? `
+            <div class="empty-monitor-box compact-empty">
+                <strong>No hay servidores agregados.</strong>
+                <p>Agrega una IP para empezar a monitorear.</p>
+            </div>
+        ` : filteredServerList.length === 0 ? `
+            <div class="empty-monitor-box compact-empty">
+                <strong>Sin resultados.</strong>
+                <p>No hay servidores que coincidan con la búsqueda.</p>
+            </div>
+        ` : `
+            <div class="server-list improved-server-list">
+                ${filteredServerList.map(server => renderServerButton(server)).join("")}
+            </div>
+        `}
+    </aside>
+
+    <main class="server-monitor-main improved-server-monitor-main">
+        ${AppStore.isAdmin() ? renderAddServerToolbar(showAddServerForm, serverList.length) : ""}
+
+        ${showAddServerForm ? renderAddServerForm() : ""}
+
+        ${selectedServer ? renderSelectedServer(selectedServer, activeSessions, topPlayers, recentAlerts) : renderEmptyState()}
+    </main>
+</section>
+
+${editingAliasPlayer ? renderAliasModal(editingAliasPlayer) : ""}
     `);
 }
+function renderAddServerToolbar(showAddServerForm, serverCount) {
+    if (serverCount === 0) {
+        return "";
+    }
 
+    return `
+        <section class="add-server-toolbar">
+            <div>
+                <strong>Agregar servidor</strong>
+                <span>Guarda otra IP pública para monitorearla.</span>
+            </div>
+
+            <button id="toggleAddServerBtn" type="button">
+                ${showAddServerForm ? "Ocultar formulario" : "Agregar IP"}
+            </button>
+        </section>
+    `;
+}
 function renderAddServerForm() {
     return `
-        <details class="server-form-card compact-add-server">
-            <summary>
-                <div>
-                    <strong>Agregar servidor</strong>
-                    <span>Guarda una IP pública para monitorearla.</span>
-                </div>
-
-                <small>Mostrar formulario</small>
-            </summary>
+        <section class="server-form-card compact-add-server clean-add-server">
+            <div class="compact-add-title">
+                <strong>Agregar servidor</strong>
+                <span>Guarda una IP pública para monitorearla.</span>
+            </div>
 
             <form id="addServerForm" class="server-form compact-server-form">
                 <div>
@@ -157,16 +202,17 @@ function renderAddServerForm() {
                     Guardar
                 </button>
             </form>
-        </details>
+        </section>
     `;
 }
 
 function renderServerButton(server) {
     const activeClass = server.id === selectedServerId ? "active" : "";
+    const displayName = server.name || server.server_name || "Servidor sin nombre";
 
     return `
-        <button class="server-list-item ${activeClass}" data-server-id="${server.id}">
-            <strong>${escapeHtml(server.name)}</strong>
+        <button class="server-list-item improved-server-item ${activeClass}" data-server-id="${server.id}">
+            <strong>${escapeHtml(displayName)}</strong>
             <span>${escapeHtml(formatServerAddress(server))}</span>
             <small>${escapeHtml(server.map_name || "Mapa pendiente")}</small>
         </button>
@@ -842,6 +888,25 @@ function encodePlayerPayload(serverId, player) {
 function decodePlayerPayload(value) {
     return JSON.parse(decodeURIComponent(value));
 }
+function filterServersBySearch(servers, searchText) {
+    const query = String(searchText || "").trim().toLowerCase();
+
+    if (!query) {
+        return servers;
+    }
+
+    return servers.filter(server => {
+        return [
+            server.name,
+            server.server_name,
+            server.map_name,
+            server.ip,
+            server.port
+        ]
+            .filter(Boolean)
+            .some(value => String(value).toLowerCase().includes(query));
+    });
+}
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -858,6 +923,28 @@ function closeAliasModal() {
 }
 
 function initServerMonitorEvents() {
+        document.querySelector("#serverSearchForm")?.addEventListener("submit", event => {
+        event.preventDefault();
+
+        serverMonitorSearch = document.querySelector("#serverSearchInput")?.value || "";
+        localStorage.setItem("serverMonitorSearch", serverMonitorSearch);
+
+        AppStore.setPage("serverMonitor");
+    });
+
+    document.querySelector("#clearServerSearchBtn")?.addEventListener("click", () => {
+        serverMonitorSearch = "";
+        localStorage.removeItem("serverMonitorSearch");
+
+        AppStore.setPage("serverMonitor");
+    });
+
+    document.querySelector("#toggleAddServerBtn")?.addEventListener("click", () => {
+        addServerExpanded = !addServerExpanded;
+        localStorage.setItem("addServerExpanded", String(addServerExpanded));
+
+        AppStore.setPage("serverMonitor");
+    });
     document.querySelectorAll("[data-toggle-server-alerts]").forEach(button => {
     button.addEventListener("click", async () => {
         const serverId = button.dataset.toggleServerAlerts;

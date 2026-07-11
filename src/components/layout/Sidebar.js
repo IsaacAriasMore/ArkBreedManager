@@ -7,6 +7,7 @@ export function Sidebar() {
         bindSidebarButton("btnInis", "inis");
         bindSidebarButton("btnMapsBosses", "mapsBosses");
         bindSidebarButton("btnServerMonitor", "serverMonitor");
+        bindSidebarButton("btnServerActivity", "serverActivity");
         bindSidebarButton("btnHistory", "history");
         bindSidebarButton("btnStatistics", "statistics");
 
@@ -30,6 +31,7 @@ export function Sidebar() {
                 ${navButton("btnInis", "inis", "INIs")}
                 ${navButton("btnMapsBosses", "mapsBosses", "Mapas & Bosses")}
                 ${navButton("btnServerMonitor", "serverMonitor", "Monitor Server")}
+                ${navButton("btnServerActivity", "serverActivity", "Actividad Server")}
 
                 ${AppStore.isAdmin() ? `
                     <div class="sidebar-section">Administración</div>

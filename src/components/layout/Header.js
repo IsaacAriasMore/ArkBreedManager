@@ -11,7 +11,8 @@ const pageTitles = {
     users: "Usuarios",
     breeds: "Administrar Breeds",
     history: "Historial",
-    statistics: "Estadísticas"
+    statistics: "Estadísticas",
+    serverActivity: "Actividad Server"
 };
 
 export function Header() {

@@ -13,6 +13,7 @@ import { HistoryPage } from "./pages/history";
 import { InisPage } from "./pages/inis";
 import { MapsBossesPage } from "./pages/mapsBosses";
 import { ServerMonitorPage } from "./pages/serverMonitor";
+import { ServerActivityPage } from "./pages/serverActivity";
 
 const pages = {
     dashboard: {
@@ -61,8 +62,11 @@ const pages = {
     },
     serverMonitor: {
         component: ServerMonitorPage,
-        roles: ["admin", "breeder"]
-    }
+        roles: ["admin", "breeder"],
+    },
+    serverActivity: {
+         component: ServerActivityPage,
+          roles: ["admin", "breeder"] }
 };
 
 export async function initApp() {

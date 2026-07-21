@@ -10,7 +10,7 @@ export function parseServerAddress(address) {
     const [ip, portText] = cleanAddress.split(":");
     const port = Number(portText);
 
-    if (!ip || !Number.isInteger(port) || port <= 0) {
+    if (!ip || !Number.isInteger(port) || port <= 0 || port > 65535) {
         throw new Error("IP o puerto inválido.");
     }
 
@@ -44,15 +44,23 @@ export async function getMonitoredServers() {
         .order("created_at", { ascending: false });
 }
 
-export async function createMonitoredServer({ name, address }) {
+export async function createMonitoredServer({
+    name,
+    address,
+    queryPort,
+    directQueryEnabled = true
+}) {
     const { ip, port } = parseServerAddress(address);
+    const normalizedQueryPort = normalizeOptionalPort(queryPort);
 
     return await supabase
         .from("monitored_servers")
         .insert({
             name: name.trim(),
             ip,
-            port
+            port,
+            query_port: normalizedQueryPort,
+            direct_query_enabled: Boolean(directQueryEnabled)
         })
         .select()
         .single();
@@ -74,7 +82,7 @@ export async function updateServerAlertSettings({
     return await supabase
         .from("monitored_servers")
         .update({
-            alerts_enabled: alertsEnabled,
+            alerts_enabled: Boolean(alertsEnabled),
             alert_from_time: alertFromTime,
             alert_to_time: alertToTime
         })
@@ -201,32 +209,127 @@ export async function getServerRecentAlerts(serverId, limit = 8) {
 }
 
 export async function syncBattlemetricsServer(serverId) {
-    const { data, error: sessionError } = await supabase.auth.getSession();
+    try {
+        const accessToken = await getFreshAccessToken();
 
-    if (sessionError || !data?.session) {
+        const result = await supabase.functions.invoke("sync-battlemetrics-server", {
+            body: {
+                serverId
+            },
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        if (result.error) {
+            return {
+                data: result.data,
+                error: await normalizeFunctionError(result.error)
+            };
+        }
+
+        return result;
+    } catch (error) {
         return {
             data: null,
-            error: sessionError || new Error("No hay sesión activa.")
+            error: error instanceof Error
+                ? error
+                : new Error("No se pudo sincronizar el servidor.")
         };
     }
+}
 
-    const result = await supabase.functions.invoke("sync-battlemetrics-server", {
-        body: {
-            serverId
-        },
-        headers: {
-            Authorization: `Bearer ${data.session.access_token}`
+export async function updateServerQuerySettings({
+    serverId,
+    queryPort,
+    directQueryEnabled
+}) {
+    const normalizedQueryPort = normalizeOptionalPort(queryPort);
+
+    return await supabase
+        .from("monitored_servers")
+        .update({
+            query_port: normalizedQueryPort,
+            direct_query_enabled: Boolean(directQueryEnabled)
+        })
+        .eq("id", serverId)
+        .select()
+        .single();
+}
+
+export async function testServerDirectQuery({ serverId, queryPort }) {
+    try {
+        const normalizedQueryPort = normalizeOptionalPort(queryPort);
+
+        if (!normalizedQueryPort) {
+            return {
+                data: null,
+                error: new Error("Escribe un query port válido antes de probar.")
+            };
         }
-    });
 
-    if (result.error) {
+        const accessToken = await getFreshAccessToken();
+
+        const result = await supabase.functions.invoke("sync-battlemetrics-server", {
+            body: {
+                action: "testDirectQuery",
+                serverId,
+                queryPort: normalizedQueryPort
+            },
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        if (result.error) {
+            return {
+                data: result.data,
+                error: await normalizeFunctionError(result.error)
+            };
+        }
+
+        return result;
+    } catch (error) {
         return {
-            data: result.data,
-            error: await normalizeFunctionError(result.error)
+            data: null,
+            error: error instanceof Error
+                ? error
+                : new Error("No se pudo probar el query directo.")
         };
     }
+}
 
-    return result;
+async function getFreshAccessToken() {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error || !data?.session) {
+        throw error || new Error("No hay sesión activa. Cierra sesión e inicia sesión otra vez.");
+    }
+
+    let session = data.session;
+
+    const expiresAtMs = session.expires_at
+        ? session.expires_at * 1000
+        : 0;
+
+    const expiresSoon = !expiresAtMs || expiresAtMs - Date.now() < 60_000;
+
+    if (expiresSoon) {
+        const { data: refreshedData, error: refreshError } =
+            await supabase.auth.refreshSession();
+
+        if (refreshError || !refreshedData?.session) {
+            throw refreshError || new Error("La sesión expiró. Cierra sesión e inicia sesión otra vez.");
+        }
+
+        session = refreshedData.session;
+    }
+
+    if (!session.access_token) {
+        throw new Error("No se pudo obtener token de sesión.");
+    }
+
+    return session.access_token;
 }
 
 async function normalizeFunctionError(error) {
@@ -251,4 +354,18 @@ async function normalizeFunctionError(error) {
     }
 
     return new Error(message);
+}
+
+function normalizeOptionalPort(value) {
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return null;
+    }
+
+    const port = Number(value);
+
+    if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+        throw new Error("Query port inválido.");
+    }
+
+    return port;
 }

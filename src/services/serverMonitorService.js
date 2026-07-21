@@ -210,7 +210,7 @@ export async function syncBattlemetricsServer(serverId) {
         };
     }
 
-    return await supabase.functions.invoke("sync-battlemetrics-server", {
+    const result = await supabase.functions.invoke("sync-battlemetrics-server", {
         body: {
             serverId
         },
@@ -218,4 +218,37 @@ export async function syncBattlemetricsServer(serverId) {
             Authorization: `Bearer ${data.session.access_token}`
         }
     });
+
+    if (result.error) {
+        return {
+            data: result.data,
+            error: await normalizeFunctionError(result.error)
+        };
+    }
+
+    return result;
+}
+
+async function normalizeFunctionError(error) {
+    let message = error?.message || "No se pudo sincronizar con BattleMetrics.";
+
+    try {
+        if (error?.context) {
+            const response = typeof error.context.clone === "function"
+                ? error.context.clone()
+                : error.context;
+
+            const body = await response.json();
+
+            message =
+                body?.error ||
+                body?.message ||
+                body?.details ||
+                message;
+        }
+    } catch {
+        // Si no se puede leer el JSON del error, dejamos el mensaje original.
+    }
+
+    return new Error(message);
 }
